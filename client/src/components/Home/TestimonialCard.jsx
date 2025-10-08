@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'react';
 import ReactStars from "react-rating-stars-component";
 
 function TestimonialCard(props) {
@@ -28,4 +28,5 @@ function TestimonialCard(props) {
   )
 }
 
-export default TestimonialCard
+export default TestimonialCard;
+
