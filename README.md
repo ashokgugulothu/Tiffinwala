@@ -119,9 +119,7 @@ The Tiffin Wala is MERN Stack Tiffin Service web application that allows you to 
     <td><img src="https://res.cloudinary.com/dvoj9zeng/image/upload/v1725041344/Screenshot_2024-08-30_232728_lxg3vo.png" alt="cart" /></td>
     <td><img src="https://res.cloudinary.com/dvoj9zeng/image/upload/v1725041344/Screenshot_2024-08-30_232757_pyqihx.png" alt="checkout" /></td>
   </tr>
-  <tr>
-    <td><img src="https://res.cloudinary.com/dvoj9zeng/image/upload/v1725041636/Screenshot_31_krxc5f.png" alt="razorpay" /></td>
-  </tr>
+
 </table>
 
 <br />
