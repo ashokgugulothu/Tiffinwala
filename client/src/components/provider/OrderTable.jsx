@@ -193,7 +193,7 @@ export default function OrderTable() {
                 <TablePagination
                   rowsPerPageOptions={[8, 16, { label: 'All', value: -1 }]}
                   colSpan={3}
-                  count={3}//orders.length
+                  count={orders ? orders.length : 0}//orders.length
                   rowsPerPage={rowsPerPage}
                   page={page}
                   SelectProps={{

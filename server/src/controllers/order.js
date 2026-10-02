@@ -9,34 +9,37 @@ exports.addOrder = async (req, res) => {
         const user = req.user._id;
         if (!user)
             return res.status(400).json({ message: "Please Login to make orders" });
+        
         const data = req.body;
 
-        const obj = { user, ...data };
+        // 1. Check if food exists and has enough quantity
+        const food = await foodModel.findById(data.food);
+        if (!food) {
+            return res.status(404).json({ message: "Food item not found" });
+        }
+        if (food.quantity < data.quantity) {
+            return res.status(400).json({ message: "Requested quantity exceeds available stock" });
+        }
 
+        const obj = { user, ...data };
         const order = await orderModel.create(obj);
 
-
-        const food = await foodModel.findById(data.food);
-        const quantity = food.quantity - data.quantity;
-        await foodModel.findByIdAndUpdate(food._id, { $set: { quantity } });
-
+        // 2. Deduct inventory quantity
+        const newQuantity = food.quantity - data.quantity;
+        await foodModel.findByIdAndUpdate(food._id, { $set: { quantity: newQuantity } });
 
         try {
-            const emailRes = await mailSender(
+            await mailSender(
                 data.email,
                 "Order Placed Successfully",
                 paymentUsEmail(data.email, data.quantity, data.totalAmount, data.paymentId, order._id)
             );
-
-            return res.json({
-                success: true,
-                message: "Email sent successfully",
-            });
-        } catch (error) {
-            return res.status(200).json({ order });
+        } catch (mailError) {
+            console.error("Email sending failed:", mailError.message);
         }
+
+        return res.status(201).json({ success: true, order });
     } catch (error) {
-        console.log(error.message)
         return res.status(500).json({ message: error.message });
     }
 };
@@ -44,21 +47,12 @@ exports.addOrder = async (req, res) => {
 exports.getUserOrders = async (req, res) => {
     try {
         const user = req.user._id;
-        if (!user)
-            return res.status(400).json({ message: "Please Login to fetch orders" });
-
         const orders = await orderModel.find({ user })
-            .populate({
-                path: 'food',
-            })
-            .populate({
-                path: 'user',
-                select: '-password',
-            })
-            .populate({
-                path: 'provider',
-                select: '-password',
-            });
+            .populate('food')
+            .populate({ path: 'user', select: '-password' })
+            .populate({ path: 'provider', select: '-password' })
+            .sort({ createdAt: -1 });
+
         if (!orders)
             return res.status(404).json({ message: "No orders Found" });
 
@@ -71,10 +65,9 @@ exports.getUserOrders = async (req, res) => {
 exports.getProvidersOrders = async (req, res) => {
     try {
         const provider = req.provider._id;
-        if (!provider)
-            return res.status(400).json({ message: "Please Login to fetch orders" });
-
-        const orders = await orderModel.find({ provider }).populate("user food").sort({ createdAt: -1 });
+        const orders = await orderModel.find({ provider })
+            .populate("user food")
+            .sort({ createdAt: -1 });
 
         if (!orders)
             return res.status(404).json({ message: "No orders Found" });
@@ -92,7 +85,6 @@ exports.deleteOrder = async (req, res) => {
             return res.status(404).json({ message: "Invalid Request" });
 
         await orderModel.findByIdAndDelete(_id);
-
         return res.status(200).json({ message: "Order Deleted Successfully" });
     } catch (error) {
         return res.status(500).json({ message: error.message });
@@ -101,37 +93,43 @@ exports.deleteOrder = async (req, res) => {
 
 exports.updateOrderStatus = async (req, res) => {
     try {
-
         const status = req.body.status;
         const id = req.body._id;
-        const email = req.body.user;
+        
         if (!id) {
             return res.status(400).json({ message: "No Order Found" });
         }
 
-        const myOrder = await orderModel.findById(id);
-
-        if (status !== "Delivered") {
-            const quantity = myOrder.quantity + req.body.food.quantity;
-            await foodModel.findByIdAndUpdate(req.body.food._id, { $set: { quantity } });
+        const myOrder = await orderModel.findById(id).populate("food");
+        if (!myOrder) {
+            return res.status(404).json({ message: "Order not found" });
         }
 
-        const updatedOrder = await orderModel.findByIdAndUpdate(id, { orderStatus: status }, { new: true }).populate("user food");
-                try {
-            const emailRes = await mailSender(
+        // If order is cancelled, restore the inventory quantity
+        if (status === "Cancelled" && myOrder.orderStatus !== "Cancelled") {
+            const foodItem = await foodModel.findById(myOrder.food._id);
+            if (foodItem) {
+                const restoredQuantity = foodItem.quantity + myOrder.quantity;
+                await foodModel.findByIdAndUpdate(foodItem._id, { $set: { quantity: restoredQuantity } });
+            }
+        }
+
+        const updatedOrder = await orderModel.findByIdAndUpdate(
+            id, 
+            { orderStatus: status }, 
+            { new: true }
+        ).populate("user food");
+
+        try {
+            await mailSender(
                 updatedOrder.email,
-                "Order Updated Successfully",
+                "Order Status Updated",
                 updateOrderMail(updatedOrder._id, updatedOrder.email, updatedOrder.orderStatus)
-            )
-
-            // return res.json({
-            //   success: true,
-            //   message: "Email send successfully",
-            // })
+            );
         } catch (error) {
-
             console.error("Email sending failed:", error.message);
         }
+
         return res.status(200).json({ updatedOrder });
     } catch (error) {
         console.error("Order status update failed:", error.message);
