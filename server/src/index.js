@@ -21,13 +21,13 @@ const app = express()
 env.config();
 
  app.use(cors({
-    origin: ['https://tiffin-managment-client.vercel.app','http://localhost:3000'], 
+    origin: ['https://tiffinwala-pi.vercel.app','http://localhost:3000'], 
      methods: ['GET', 'PUT', 'POST','DELETE'], 
      allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token'], 
      credentials: true
  }))
 var originsWhitelist = [
-    'https://tiffin-managment-client.vercel.app',
+    'https://tiffinwala-pi.vercel.app',
     'http://localhost:3000'
  ];
  var corsOptions = {
