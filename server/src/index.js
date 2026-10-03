@@ -26,10 +26,10 @@ env.config();
      allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-token'], 
      credentials: true
  }))
-var originsWhitelist = [
-    'https://tiffinwala-pi.vercel.app',
-    'http://localhost:3000'
- ];
+//var originsWhitelist = [
+  //  'https://tiffinwala-pi.vercel.app',
+    //'http://localhost:3000'
+ //];
  var corsOptions = {
      origin: function(origin, callback){
          var isWhitelisted = originsWhitelist.indexOf(origin) !== -1;
